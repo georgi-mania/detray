@@ -18,6 +18,7 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::omp))
        # Unit tests for the selected algebra.
        detray_add_test( ${algebra}_vecpar_cpu
                "rk_stepper_vecpar.cpp" "rk_stepper_vecpar.hpp"
+               "TimeLogger.hpp"
                LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
                detray::${algebra} vecpar::all OpenMP::OpenMP_CXX)
 
@@ -38,6 +39,7 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::cuda))
         # Unit tests for the selected algebra.
         detray_add_test(${algebra}_vecpar_gpu
                 "rk_stepper_vecpar.cpp" "rk_stepper_vecpar.hpp"
+                "TimeLogger.hpp"
                 LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
                 detray::${algebra} vecpar::all CUDA::cudart)
 
@@ -49,3 +51,19 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::cuda))
                 $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_${CMAKE_CUDA_ARCHITECTURES}>)
     endforeach()
 endif()
+
+foreach(algebra ${algebras})
+    # Unit tests for the selected algebra.
+    detray_add_test(${algebra}_cuda_clang
+            "rk_stepper_cuda_clang.cpp" "rk_stepper_cuda_clang_kernel.hpp"
+            "TimeLogger.hpp"
+            LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
+            detray::${algebra} CUDA::cudart)
+
+    target_compile_definitions( detray_test_${algebra}_cuda_clang
+            PRIVATE ${algebra}=${algebra} )
+
+    target_compile_options( detray_test_${algebra}_cuda_clang PUBLIC
+            $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>
+            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_${CMAKE_CUDA_ARCHITECTURES}>)
+endforeach()

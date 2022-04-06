@@ -14,7 +14,8 @@
 #include <vecmem/memory/host_memory_resource.hpp>
 
 #include "vecpar/all/main.hpp"
-
+#include "TimeLogger.hpp"
+/*
 TEST(rk_stepper_algo_vecpar, rk_stepper) {
 
     // VecMem memory resource(s)
@@ -97,8 +98,8 @@ TEST(rk_stepper_algo_vecpar, rk_stepper) {
         EXPECT_NEAR(getter::norm(device_relative_error), 0, epsilon);
     }
 }
+*/
 
-/*
 TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
 
     // VecMem memory resource(s)
@@ -144,6 +145,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
+    std::chrono::duration<double> time_cpu;
 
 #if defined(_OPENMP)
     start_time = std::chrono::high_resolution_clock::now();
@@ -174,7 +176,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
 
     end_time = std::chrono::high_resolution_clock::now();
 
-    std::chrono::duration<double> time_cpu = end_time - start_time;
+    time_cpu = end_time - start_time;
     printf("CPU OMP time  = %f s\n", time_cpu.count());
 #else
     start_time = std::chrono::high_resolution_clock::now();
@@ -204,7 +206,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
 
    end_time = std::chrono::high_resolution_clock::now();
 
-   std::chrono::duration<double> time_cpu = end_time - start_time;
+   time_cpu = end_time - start_time;
    printf("CPU seq time  = %f s\n", time_cpu.count());
 #endif
 
@@ -237,11 +239,19 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
     // Run RK stepper in parallel on CPU/GPU
     start_time = std::chrono::high_resolution_clock::now();
     rk_stepper_algorithm rk_stepper_algo;
-    vecpar::parallel_map(rk_stepper_algo, mng_mr, tracks_device, B);
+    vecpar::config config {157, 64};
+    vecpar::parallel_map(rk_stepper_algo, mng_mr, config, tracks_device, B);
     end_time = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> time_par = end_time - start_time;
     printf("CPU/GPU_vecpar_clang time  = %f s\n", time_par.count());
+    std::string filename;
+#if defined(_OPENMP)
+    filename = detray::Logger::buildFilename("CpuOMP_vs_vecparOMP");
+#else
+    filename = detray::Logger::buildFilename("CpuSerial_vs_vecparCUDA");
+#endif
+    detray::Logger::logTime(filename, time_cpu.count(), time_par.count());
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();
@@ -254,4 +264,3 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_timed) {
         EXPECT_NEAR(getter::norm(device_relative_error), 0, epsilon);
     }
 }
-*/
