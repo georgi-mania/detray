@@ -92,8 +92,10 @@ foreach(algebra ${algebras})
     target_compile_definitions( detray_test_${algebra}_cuda_clang
             PRIVATE ${algebra}=${algebra} )
 
+    set_target_properties( detray_test_${algebra}_vecpar_gpu
+            PROPERTIES CXX_STANDARD 20 )
+
     target_compile_options( detray_test_${algebra}_cuda_clang PUBLIC
-            $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>
-            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86>)
+            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86 --cuda-gpu-arch=sm_86>)
 endforeach()
 

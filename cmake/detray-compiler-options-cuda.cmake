@@ -19,7 +19,7 @@ if( "${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC" )
 endif()
 
 # Set the CUDA architecture to build code for.
-set( CMAKE_CUDA_ARCHITECTURES "52" CACHE STRING
+set( CMAKE_CUDA_ARCHITECTURES "86" CACHE STRING
    "CUDA architectures to build device code for" )
 
 if( "${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA" )

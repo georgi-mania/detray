@@ -12,6 +12,7 @@
 #include <vecmem/memory/cuda/managed_memory_resource.hpp>
 
 #include "vecpar/all/main.hpp"
+#include "../TimeLogger.hpp"
 
 /*
 TEST(rk_stepper_algo_vecpar, rk_stepper_managed_memory) {
@@ -144,7 +145,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
     std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
     std::chrono::duration<double> time_cpu;
 
-#if defined(_OPENMP)
+#if defined(_OPENMP) && !defined(__CUDA__)
     start_time = std::chrono::high_resolution_clock::now();
 
     // Define RK stepper
@@ -241,13 +242,17 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
 
     std::chrono::duration<double> time_par = end_time - start_time;
     printf("CPU/GPU_vecpar_clang time  = %f s\n", time_par.count());
-    std::string filename;
-#if defined(_OPENMP)
-    filename = detray::Logger::buildFilename("CpuOMP_vs_vecparOMP");
+
+#if !defined(__CUDA__)
+    printf("Built for CPU\n");
+    detray::Logger::logTime(detray::Logger::buildFilename("omp_cpu_mm"), time_cpu.count());
+    detray::Logger::logTime(detray::Logger::buildFilename("vecpar_cpu_mm"), time_par.count());
 #else
-    filename = detray::Logger::buildFilename("CpuSerial_vs_vecparCUDA");
+    printf("Built for GPU\n");
+    detray::Logger::logTime(detray::Logger::buildFilename("seq_cpu_mm"), time_cpu.count());
+    detray::Logger::logTime(detray::Logger::buildFilename("vecpar_gpu_mm"), time_par.count());
 #endif
-    detray::Logger::logTime(filename, time_cpu.count(), time_par.count());
+
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();

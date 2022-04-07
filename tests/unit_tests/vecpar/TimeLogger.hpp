@@ -14,15 +14,11 @@ class Logger {
     public:
     // Open/Create the filename with the given 'filename' and
     // print the times separated by commas, on a single line
-    static void logTime(std::string filename, double t1, double t2) {
+    static void logTime(std::string filename, double t1) {
 
         std::ofstream myFile;
         myFile.open(filename, std::ofstream::out | std::ofstream::app);
-        if (t2 != -1)
-            myFile << t1 << "," << t2 << ",";
-        else
-            myFile << t1 << ",";
-        myFile << std::endl;
+        myFile << t1 << std::endl;
 
         myFile.close();
     }
