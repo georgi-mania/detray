@@ -91,8 +91,8 @@ TEST(rk_stepper_cuda, rk_stepper_timed) {
 
     std::chrono::duration<double> time_par = end_time - start_time;
     printf("cuda_clang time  = %f s\n", time_par.count());
-    std::string filename = Logger::buildFilename("CudaClang");
-    Logger::logTime(filename, time_par.count(), -1);
+    std::string filename = Logger::buildFilename("cuda_clang");
+    Logger::logTime(filename, time_par.count());
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();

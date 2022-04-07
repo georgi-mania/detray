@@ -178,8 +178,8 @@ TEST(rk_stepper_cuda, rk_stepper_timed) {
 
     std::chrono::duration<double> time_par = end_time - start_time;
     printf("CUDA time  = %f s\n", time_par.count());
-    std::string filename = detray::Logger::buildFilename("CudaNVCC");
-    detray::Logger::logTime(filename, time_par.count(), -1);
+    std::string filename = detray::Logger::buildFilename("cuda_nvcc");
+    detray::Logger::logTime(filename, time_par.count());
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();
