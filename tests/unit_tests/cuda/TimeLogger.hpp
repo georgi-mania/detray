@@ -23,11 +23,7 @@ class Logger {
 
         myFile.close();
     }
-
-    // Concatenate the given 'keywords' separated by '_'
-    // e.g. buildFilename("nTracks", "100") -> "nTracks_100";
-    // 	buildFilename("nTracks", "100", "1GeV", "CPU") ->
-    // "nTracks_100_1GeV_CPU";
+    
     template <typename... T>
     static std::string buildFilename(const T &...keywords) {
         std::vector<std::string> keysVec = {keywords...};
