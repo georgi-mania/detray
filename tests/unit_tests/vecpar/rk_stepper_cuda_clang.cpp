@@ -4,12 +4,14 @@
  *
  * Mozilla Public License Version 2.0
  */
+
 #include <gtest/gtest.h>
+#include <chrono>
 
 #include <vecmem/memory/cuda/managed_memory_resource.hpp>
 #include <vecmem/memory/host_memory_resource.hpp>
 
-#include "rk_stepper_cuda_kernel.hpp"
+#include "rk_stepper_cuda_clang_kernel.hpp"
 #include "TimeLogger.hpp"
 
 TEST(rk_stepper_cuda, rk_stepper_timed) {
@@ -56,7 +58,6 @@ TEST(rk_stepper_cuda, rk_stepper_timed) {
     // Define RK stepper
     rk_stepper_type rk(B);
     nav_state n_state{};
-
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
 
         auto& traj = tracks_host[i];
@@ -80,18 +81,18 @@ TEST(rk_stepper_cuda, rk_stepper_timed) {
                                backward_state.dist_to_path_limit());
     }
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    auto start_time =  std::chrono::high_resolution_clock::now();
     // Get tracks data
     auto tracks_data = vecmem::get_data(tracks_device);
 
     // Run RK stepper cuda kernel
     rk_stepper_test(tracks_data, B);
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto end_time =  std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> time_par = end_time - start_time;
-    printf("CUDA time  = %f s\n", time_par.count());
-    std::string filename = detray::Logger::buildFilename("cuda_nvcc");
-    detray::Logger::logTime(filename, time_par.count());
+    printf("cuda_clang time  = %f s\n", time_par.count());
+    std::string filename = Logger::buildFilename("cuda_clang");
+    Logger::logTime(filename, time_par.count());
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();

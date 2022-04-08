@@ -19,8 +19,10 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::omp))
         detray_add_test( ${algebra}_vecpar_cpu_host_mem
                 "host_memory/rk_stepper_vecpar_hm.cpp"
                 "algorithm/rk_stepper_vecpar.hpp"
+                "TimeLogger.hpp"
                 LINK_LIBRARIES GTest::gtest_main vecmem::core detray_tests_common
                 detray::${algebra} vecpar::all OpenMP::OpenMP_CXX)
+
 
         target_compile_definitions( detray_test_${algebra}_vecpar_cpu_host_mem
                 PRIVATE ${algebra}=${algebra} )
@@ -40,6 +42,7 @@ if( DETRAY_BUILD_CUDA )
                     "managed_memory/rk_stepper_vecpar_mm.cpp"
                     "host_memory/rk_stepper_vecpar_hm.cpp"
                     "algorithm/rk_stepper_vecpar.hpp"
+                    "TimeLogger.hpp"
                     LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
                     detray::${algebra} vecpar::all CUDA::cudart OpenMP::OpenMP_CXX)
 
@@ -62,6 +65,7 @@ if( DETRAY_BUILD_CUDA )
                     "managed_memory/rk_stepper_vecpar_mm.cpp"
              #       "host_memory/rk_stepper_vecpar_hm.cpp"
                     "algorithm/rk_stepper_vecpar.hpp"
+                    "TimeLogger.hpp"
                     LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
                     detray::${algebra} vecpar::all CUDA::cudart)
 
@@ -72,8 +76,27 @@ if( DETRAY_BUILD_CUDA )
                     PROPERTIES CXX_STANDARD 20 )
 
             target_compile_options( detray_test_${algebra}_vecpar_gpu PUBLIC
-                    $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_${CMAKE_CUDA_ARCHITECTURES}>)
+                    $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86>)
         endforeach()
     endif()
 endif() # if CUDA support enabled
+
+
+foreach(algebra ${algebras})
+    # Unit tests for the selected algebra.
+    detray_add_test(${algebra}_cuda_clang
+            "rk_stepper_cuda_clang.cpp" "rk_stepper_cuda_clang_kernel.hpp"
+            "TimeLogger.hpp"
+            LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
+            detray::${algebra} CUDA::cudart)
+
+    target_compile_definitions( detray_test_${algebra}_cuda_clang
+            PRIVATE ${algebra}=${algebra} )
+
+    set_target_properties( detray_test_${algebra}_vecpar_gpu
+            PROPERTIES CXX_STANDARD 20 )
+
+    target_compile_options( detray_test_${algebra}_cuda_clang PUBLIC
+            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86 --cuda-gpu-arch=sm_86>)
+endforeach()
 
