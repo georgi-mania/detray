@@ -104,4 +104,3 @@ TEST(rk_stepper_cuda, rk_stepper_timed) {
         EXPECT_NEAR(getter::norm(device_relative_error), 0, epsilon);
     }
 }
-

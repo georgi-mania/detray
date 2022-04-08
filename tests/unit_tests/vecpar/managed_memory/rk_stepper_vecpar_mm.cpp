@@ -16,7 +16,6 @@
 
 /*
 TEST(rk_stepper_algo_vecpar, rk_stepper_managed_memory) {
-
     // VecMem memory resource(s)
     vecmem::host_memory_resource host_mr;
     vecmem::cuda::managed_memory_resource mng_mr;
@@ -99,6 +98,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_managed_memory) {
     }
 }
 */
+
 TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
 
     // VecMem memory resource(s)
@@ -203,11 +203,9 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
     }
 
     end_time = std::chrono::high_resolution_clock::now();
-
     time_cpu = end_time - start_time;
     printf("CPU seq time  = %f s\n", time_cpu.count());
 #endif
-
     /// get data for test bench
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
@@ -237,6 +235,7 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
     // Run RK stepper in parallel on CPU/GPU
     start_time = std::chrono::high_resolution_clock::now();
     rk_stepper_algorithm rk_stepper_algo;
+
     vecpar::parallel_map(rk_stepper_algo, mng_mr, getConfig(), tracks_device, B);
     end_time = std::chrono::high_resolution_clock::now();
 
@@ -252,7 +251,6 @@ TEST(rk_stepper_algo_vecpar, rk_stepper_mm_timed) {
     detray::Logger::logTime(detray::Logger::buildFilename("seq_cpu_mm"), time_cpu.count());
     detray::Logger::logTime(detray::Logger::buildFilename("vecpar_gpu_mm"), time_par.count());
 #endif
-
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();

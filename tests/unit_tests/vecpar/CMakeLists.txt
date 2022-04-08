@@ -23,6 +23,7 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::omp))
                 LINK_LIBRARIES GTest::gtest_main vecmem::core detray_tests_common
                 detray::${algebra} vecpar::all OpenMP::OpenMP_CXX)
 
+
         target_compile_definitions( detray_test_${algebra}_vecpar_cpu_host_mem
                 PRIVATE ${algebra}=${algebra} )
 
