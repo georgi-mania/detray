@@ -76,7 +76,7 @@ if( DETRAY_BUILD_CUDA )
                     PROPERTIES CXX_STANDARD 20 )
 
             target_compile_options( detray_test_${algebra}_vecpar_gpu PUBLIC
-                    $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86>)
+                    $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86>) #-fno-fast-math -ffast-math
         endforeach()
     endif()
 endif() # if CUDA support enabled
@@ -97,6 +97,6 @@ foreach(algebra ${algebras})
             PROPERTIES CXX_STANDARD 20 )
 
     target_compile_options( detray_test_${algebra}_cuda_clang PUBLIC
-            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86 --cuda-gpu-arch=sm_86>)
+            $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_86 --cuda-gpu-arch=sm_86>) #-ffast-math -ffast-math
 endforeach()
 
