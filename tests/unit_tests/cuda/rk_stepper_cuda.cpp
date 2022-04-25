@@ -5,6 +5,7 @@
  * Mozilla Public License Version 2.0
  */
 #include <gtest/gtest.h>
+#include "tests/common/tools/time_logger.hpp"
 
 #include <vecmem/memory/cuda/managed_memory_resource.hpp>
 #include <vecmem/memory/host_memory_resource.hpp>
@@ -102,6 +103,12 @@ TEST(rk_stepper_cuda, rk_stepper) {
 
     // Run RK stepper cuda kernel
     rk_stepper_test(tracks_data, B);
+
+    // To print the time:
+    // TIME(rk_stepper_test(tracks_data, B);)
+
+    // To log the time in an output file:
+    // TIME_TO_FILE(rk_stepper_test(tracks_data, B);, "rk_stepper_cuda_kernel.csv")
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();

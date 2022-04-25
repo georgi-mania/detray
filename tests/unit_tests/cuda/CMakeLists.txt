@@ -10,6 +10,9 @@ enable_language( CUDA )
 # Set the CUDA build flags.
 include( detray-compiler-options-cuda )
 
+# Configure if the tests should record (and log) the time
+# add_definitions( -DDETRAY_LOG_TIME )
+
 # "Core" tests.
 detray_add_test( core_cuda
    "grids_grid2_cuda.cpp" "grids_grid2_cuda_kernel.hpp"
