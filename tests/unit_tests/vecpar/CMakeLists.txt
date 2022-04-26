@@ -88,7 +88,7 @@ foreach(algebra ${algebras})
             "rk_stepper_cuda_clang.cpp" "rk_stepper_cuda_clang_kernel.hpp"
             "TimeLogger.hpp"
             LINK_LIBRARIES GTest::gtest_main vecmem::cuda detray_tests_common
-            detray::${algebra} CUDA::cudart)
+            detray::${algebra} vecpar::all CUDA::cudart)
 
     target_compile_definitions( detray_test_${algebra}_cuda_clang
             PRIVATE ${algebra}=${algebra} )
