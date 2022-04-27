@@ -93,7 +93,7 @@ foreach(algebra ${algebras})
     target_compile_definitions( detray_test_${algebra}_cuda_clang
             PRIVATE ${algebra}=${algebra} )
 
-    set_target_properties( detray_test_${algebra}_vecpar_gpu
+    set_target_properties( detray_test_${algebra}_cuda_clang
             PROPERTIES CXX_STANDARD 20 )
 
     target_compile_options( detray_test_${algebra}_cuda_clang PUBLIC
