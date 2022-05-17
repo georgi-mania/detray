@@ -5,16 +5,16 @@
 # Mozilla Public License Version 2.0
 
 # Set up all of the "host" tests.
-add_subdirectory( core )
-add_subdirectory( array )
+#add_subdirectory( core )
+#add_subdirectory( array )
 if( DETRAY_EIGEN_PLUGIN )
-   add_subdirectory( eigen )
+#   add_subdirectory( eigen )
 endif()
 if( DETRAY_SMATRIX_PLUGIN )
-   add_subdirectory( smatrix )
+ #  add_subdirectory( smatrix )
 endif()
 if( DETRAY_VC_PLUGIN )
-   add_subdirectory( vc )
+  # add_subdirectory( vc )
 endif()
 
 # Set up all of the "device" tests.
