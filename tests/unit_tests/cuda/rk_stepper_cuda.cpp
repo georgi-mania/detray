@@ -11,7 +11,7 @@
 #include <vecmem/memory/host_memory_resource.hpp>
 
 #include "rk_stepper_cuda_kernel.hpp"
-/*
+
 TEST(rk_stepper_cuda, rk_stepper) {
 
     // VecMem memory resource(s)
@@ -235,23 +235,19 @@ TEST(rk_stepper_cuda, bound_state) {
         }
     }
 }
-    */
+
 #include "TimeLogger.hpp"
-std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
-std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
 
-TEST(rk_stepper_cuda, rk_stepper) {
 
+TEST(rk_stepper_cuda, rk_stepper_time) {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
     // VecMem memory resource(s)
     vecmem::host_memory_resource host_mr;
     vecmem::cuda::managed_memory_resource mng_mr;
 
     // Create the vector of initial track parameters
-    vecmem::vector<free_track_parameters> tracks_host(&mng_mr);
     vecmem::vector<free_track_parameters> tracks_device(&mng_mr);
-
-    // Create the vector of accumulated path lengths
-    vecmem::vector<scalar> path_lengths(&host_mr);
 
     // Set origin position of tracks
     const point3 ori{0., 0., 0.};
@@ -281,49 +277,7 @@ TEST(rk_stepper_cuda, rk_stepper) {
             // intialize a track
             free_track_parameters traj(ori, 0, dir, -1);
 
-            tracks_host.push_back(traj);
             tracks_device.push_back(traj);
-        }
-    }
-
-    for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
-
-        auto &traj = tracks_host[i];
-        free_track_parameters c_traj(traj);
-
-        // RK Stepping into forward direction
-        prop_state<rk_stepper_t::state, nav_state> propagation{
-            rk_stepper_t::state{traj}, nav_state{}};
-        prop_state<crk_stepper_t::state, nav_state> c_propagation{
-            crk_stepper_t::state{c_traj}, nav_state{}};
-
-        rk_stepper_t::state &rk_state = propagation._stepping;
-        crk_stepper_t::state &crk_state = c_propagation._stepping;
-
-        nav_state &n_state = propagation._navigation;
-        nav_state &cn_state = c_propagation._navigation;
-
-        crk_state.template set_constraint<step::constraint::e_user>(
-            0.5 * unit_constants::mm);
-        n_state._step_size = 1. * unit_constants::mm;
-        cn_state._step_size = 1. * unit_constants::mm;
-
-        for (unsigned int i_s = 0; i_s < rk_steps; i_s++) {
-            rk_stepper.step(propagation);
-            crk_stepper.step(c_propagation);
-            crk_stepper.step(c_propagation);
-        }
-
-        // Backward direction
-        // Roll the same track back to the origin
-        // Use the same path length, since there is no overstepping
-        scalar path_length = rk_state.path_length();
-        n_state._step_size *= -1. * unit_constants::mm;
-        cn_state._step_size *= -1. * unit_constants::mm;
-        for (unsigned int i_s = 0; i_s < rk_steps; i_s++) {
-            rk_stepper.step(propagation);
-            crk_stepper.step(c_propagation);
-            crk_stepper.step(c_propagation);
         }
     }
 
@@ -341,8 +295,10 @@ TEST(rk_stepper_cuda, rk_stepper) {
     write_to_csv("rk_stepper_free_mng_gpu_cuda.csv", cuda_time.count());
 }
 
-TEST(rk_stepper_cuda, bound_state) {
+TEST(rk_stepper_cuda, bound_state_time) {
 
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
     // VecMem memory resource(s)
     vecmem::cuda::managed_memory_resource mng_mr;
 
@@ -382,50 +338,6 @@ TEST(rk_stepper_cuda, bound_state) {
     const bound_track_parameters in_param(0, bound_vector, bound_cov);
     const vector3 B{0, 0, 1. * unit_constants::T};
 
-    /**
-     * Get CPU bound parameter after one turn
-     */
-
-    mag_field_t mag_field(B);
-    prop_state<crk_stepper_t::state, nav_state> propagation{
-        crk_stepper_t::state(in_param, trf), nav_state{}};
-    crk_stepper_t::state &crk_state = propagation._stepping;
-    nav_state &n_state = propagation._navigation;
-
-    // Decrease tolerance down to 1e-8
-    crk_state.set_tolerance(rk_tolerance);
-
-    // RK stepper and its state
-    crk_stepper_t crk_stepper(mag_field);
-
-    // Path length per turn
-    scalar S = 2. * std::fabs(1. / in_param.qop()) / getter::norm(B) * M_PI;
-
-    // Run stepper for half turn
-    unsigned int max_steps = 1e4;
-
-    for (unsigned int i = 0; i < max_steps; i++) {
-
-        crk_state.set_constraint(S - crk_state.path_length());
-
-        n_state._step_size = S;
-
-        crk_stepper.step(propagation);
-
-        if (std::abs(S - crk_state.path_length()) < 1e-6) {
-            break;
-        }
-
-        // Make sure that we didn't reach the end of for loop
-        ASSERT_TRUE(i < max_steps - 1);
-    }
-
-    // Bound state after one turn propagation
-    const auto out_param_cpu = crk_stepper.bound_state(propagation, trf);
-
-    /**
-     * Get CUDA bound parameter after one turn
-     */
     start_time = std::chrono::high_resolution_clock::now();
     vecmem::vector<bound_track_parameters> out_param_cuda(1, &mng_mr);
 

@@ -12,7 +12,6 @@
 #include "vecmem/memory/host_memory_resource.hpp"
 #include "vecpar/all/main.hpp"
 
-/*
 TEST(rk_stepper_vecpar, free_state_host_mr) {
 
     std::cout << "[rk_stepper_vecpar] free_state host-device memory" <<
@@ -250,11 +249,11 @@ in_params, B, trf);
         }
     }
 }
-*/
+
 
 #include "TimeLogger.hpp"
 
-TEST(rk_stepper_vecpar, free_state_host_mr) {
+TEST(rk_stepper_vecpar, free_state_host_mr_time) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
 
@@ -379,7 +378,7 @@ TEST(rk_stepper_vecpar, free_state_host_mr) {
 #endif
 }
 
-TEST(rk_stepper_vecpar, bound_state_host_mr) {
+TEST(rk_stepper_vecpar, bound_state_host_mr_time) {
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
@@ -429,50 +428,6 @@ TEST(rk_stepper_vecpar, bound_state_host_mr) {
 
     const vector3 B{0, 0, 1. * unit_constants::T};
     mag_field_t mag_field(B);
-
-    /// Get CPU bound parameter after one turn
-
-    vecmem::vector<bound_track_parameters> out_param_cpu(&host_mr);
-    for (unsigned int i = 0; i < in_params.size(); i++) {
-
-        auto &traj = in_params[i];
-
-        prop_state<crk_stepper_t::state, nav_state> propagation{
-            crk_stepper_t::state(traj, trf), nav_state{}};
-        crk_stepper_t::state &crk_state = propagation._stepping;
-        nav_state &n_state = propagation._navigation;
-
-        // Decrease tolerance down to 1e-8
-        crk_state.set_tolerance(rk_tolerance);
-
-        // RK stepper and its state
-        crk_stepper_t crk_stepper(mag_field);
-
-        // Path length per turn
-        scalar S = 2. * std::fabs(1. / traj.qop()) / getter::norm(B) * M_PI;
-
-        // Run stepper for half turn
-        unsigned int max_steps = 1e4;
-
-        for (unsigned int j = 0; j < max_steps; j++) {
-
-            crk_state.set_constraint(S - crk_state.path_length());
-
-            n_state._step_size = S;
-
-            crk_stepper.step(propagation);
-
-            if (std::abs(S - crk_state.path_length()) < 1e-6) {
-                break;
-            }
-
-            // Make sure that we didn't reach the end of for loop
-            ASSERT_TRUE(j < max_steps - 1);
-        }
-        // Bound state after one turn propagation
-        const auto out_param = crk_stepper.bound_state(propagation, trf);
-        out_param_cpu.push_back(out_param);
-    }
 
     /// Get vecpar bound parameter after one turn
 
