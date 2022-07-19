@@ -6,7 +6,7 @@
  */
 
 template <typename scalar_t>
-detray::bound_to_free_matrix
+detray::bound_to_free_matrix DETRAY_HOST_DEVICE
 detray::detail::jacobian_engine<scalar_t>::bound_to_free_coordinate(
     const transform3& trf3, const detray::bound_vector& bound_vec) const {
 
@@ -47,7 +47,7 @@ detray::detail::jacobian_engine<scalar_t>::bound_to_free_coordinate(
 }
 
 template <typename scalar_t>
-detray::free_to_bound_matrix
+detray::free_to_bound_matrix DETRAY_HOST_DEVICE
 detray::detail::jacobian_engine<scalar_t>::free_to_bound_coordinate(
     const transform3& trf3, const detray::free_vector& free_vec) const {
 
@@ -96,7 +96,7 @@ detray::detail::jacobian_engine<scalar_t>::free_to_bound_coordinate(
 }
 
 template <typename scalar_t>
-detray::free_to_path_matrix
+detray::free_to_path_matrix DETRAY_HOST_DEVICE
 detray::detail::jacobian_engine<scalar_t>::free_to_path_correction(
     const transform3& trf3, const free_vector& free_vec) const {
 

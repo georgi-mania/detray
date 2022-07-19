@@ -7,20 +7,23 @@
 
 #include <gtest/gtest.h>
 
-#include <vecmem/memory/cuda/managed_memory_resource.hpp>
-#include <vecmem/memory/host_memory_resource.hpp>
+#include "algorithm/rk_stepper_bound_vecpar.hpp"
+#include "algorithm/rk_stepper_free_vecpar.hpp"
+#include "vecmem/memory/host_memory_resource.hpp"
+#include "vecpar/all/main.hpp"
 
-#include "rk_stepper_cuda_kernel.hpp"
 /*
-TEST(rk_stepper_cuda, rk_stepper) {
+TEST(rk_stepper_vecpar, free_state_host_mr) {
+
+    std::cout << "[rk_stepper_vecpar] free_state host-device memory" <<
+std::endl;
 
     // VecMem memory resource(s)
     vecmem::host_memory_resource host_mr;
-    vecmem::cuda::managed_memory_resource mng_mr;
 
     // Create the vector of initial track parameters
-    vecmem::vector<free_track_parameters> tracks_host(&mng_mr);
-    vecmem::vector<free_track_parameters> tracks_device(&mng_mr);
+    vecmem::vector<free_track_parameters> tracks_host(&host_mr);
+    vecmem::vector<free_track_parameters> tracks_device(&host_mr);
 
     // Create the vector of accumulated path lengths
     vecmem::vector<scalar> path_lengths(&host_mr);
@@ -107,11 +110,10 @@ TEST(rk_stepper_cuda, rk_stepper) {
         path_lengths.push_back(2 * path_length);
     }
 
-    // Get tracks data
-    auto tracks_data = vecmem::get_data(tracks_device);
-
-    // Run RK stepper cuda kernel
-    rk_stepper_test(tracks_data, B);
+    // Run RK stepper vecpar
+    rk_stepper_free_algorithm rk_stepper_algo;
+    vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar_config(),
+tracks_device, B);
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
         auto host_pos = tracks_host[i].pos();
@@ -125,10 +127,12 @@ TEST(rk_stepper_cuda, rk_stepper) {
     }
 }
 
-TEST(rk_stepper_cuda, bound_state) {
+TEST(rk_stepper_vecpar, bound_state_host_mr) {
 
+    std::cout << "[rk_stepper_vecpar] bound_state host-device memory" <<
+std::endl;
     // VecMem memory resource(s)
-    vecmem::cuda::managed_memory_resource mng_mr;
+    vecmem::host_memory_resource host_mr;
 
     // test surface
     const vector3 u{0, 1, 0};
@@ -141,6 +145,8 @@ TEST(rk_stepper_cuda, bound_state) {
     vector3 mom{0.02, 0., 0.};
     scalar time = 0.;
     scalar q = -1.;
+
+    vecmem::vector<bound_track_parameters> in_params(&host_mr);
 
     // bound vector
     typename bound_track_parameters::vector_type bound_vector;
@@ -164,91 +170,103 @@ TEST(rk_stepper_cuda, bound_state) {
 
     // bound track parameter
     const bound_track_parameters in_param(0, bound_vector, bound_cov);
+    in_params.push_back(in_param);
+
     const vector3 B{0, 0, 1. * unit_constants::T};
-
-
-// Get CPU bound parameter after one turn
-
-
     mag_field_t mag_field(B);
-    prop_state<crk_stepper_t::state, nav_state> propagation{
-        crk_stepper_t::state(in_param, trf), nav_state{}};
-    crk_stepper_t::state &crk_state = propagation._stepping;
-    nav_state &n_state = propagation._navigation;
 
-    // Decrease tolerance down to 1e-8
-    crk_state.set_tolerance(rk_tolerance);
+    /// Get CPU bound parameter after one turn
 
-    // RK stepper and its state
-    crk_stepper_t crk_stepper(mag_field);
+    vecmem::vector<bound_track_parameters> out_param_cpu(&host_mr);
+    for (unsigned int i = 0; i < in_params.size(); i++) {
 
-    // Path length per turn
-    scalar S = 2. * std::fabs(1. / in_param.qop()) / getter::norm(B) * M_PI;
+        auto& traj = in_params[i];
 
-    // Run stepper for half turn
-    unsigned int max_steps = 1e4;
+        prop_state<crk_stepper_t::state, nav_state> propagation{
+            crk_stepper_t::state(traj, trf), nav_state{}};
+        crk_stepper_t::state &crk_state = propagation._stepping;
+        nav_state &n_state = propagation._navigation;
 
-    for (unsigned int i = 0; i < max_steps; i++) {
+        // Decrease tolerance down to 1e-8
+        crk_state.set_tolerance(rk_tolerance);
 
-        crk_state.set_constraint(S - crk_state.path_length());
+        // RK stepper and its state
+        crk_stepper_t crk_stepper(mag_field);
 
-        n_state._step_size = S;
+        // Path length per turn
+        scalar S = 2. * std::fabs(1. / traj.qop()) / getter::norm(B) * M_PI;
 
-        crk_stepper.step(propagation);
+        // Run stepper for half turn
+        unsigned int max_steps = 1e4;
 
-        if (std::abs(S - crk_state.path_length()) < 1e-6) {
-            break;
+        for (unsigned int j = 0; j < max_steps; j++) {
+
+            crk_state.set_constraint(S - crk_state.path_length());
+
+            n_state._step_size = S;
+
+            crk_stepper.step(propagation);
+
+            if (std::abs(S - crk_state.path_length()) < 1e-6) {
+                break;
+            }
+
+            // Make sure that we didn't reach the end of for loop
+            ASSERT_TRUE(j < max_steps - 1);
+        }
+        // Bound state after one turn propagation
+        const auto out_param = crk_stepper.bound_state(propagation, trf);
+        out_param_cpu.push_back(out_param);
+    }
+
+    /// Get vecpar bound parameter after one turn
+
+    // Run RK stepper
+    rk_stepper_bound_algorithm rk_stepper_algo;
+    vecmem::vector<bound_track_parameters> out_param_gpu =
+        vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar::config{1, 1},
+in_params, B, trf);
+
+    /// Compare CPU and vecpar CPU/GPU
+
+    for (unsigned int k = 0; k < in_params.size(); k++) {
+        const auto bvec_cpu = out_param_cpu[k].vector();
+        const auto bcov_cpu = out_param_cpu[k].covariance();
+
+        const auto bvec_gpu = out_param_gpu[k].vector();
+        const auto bcov_gpu = out_param_gpu[k].covariance();
+
+        for (size_type i = 0; i < e_bound_size; i++) {
+            EXPECT_NEAR(matrix_operator().element(bvec_cpu, i, 0),
+                        matrix_operator().element(bvec_gpu, i, 0), epsilon);
         }
 
-        // Make sure that we didn't reach the end of for loop
-        ASSERT_TRUE(i < max_steps - 1);
-    }
-
-    // Bound state after one turn propagation
-    const auto out_param_cpu = crk_stepper.bound_state(propagation, trf);
-
-
-    // Get CUDA bound parameter after one turn
-
-    vecmem::vector<bound_track_parameters> out_param_cuda(1, &mng_mr);
-
-    bound_state_test(vecmem::get_data(out_param_cuda), in_param, B, trf);
-
-
-     // Compare CPU and CUDA
-
-    const auto bvec_cpu = out_param_cpu.vector();
-    const auto bcov_cpu = out_param_cpu.covariance();
-
-    const auto bvec_cuda = out_param_cuda[0].vector();
-    const auto bcov_cuda = out_param_cuda[0].covariance();
-
-    for (size_type i = 0; i < e_bound_size; i++) {
-        EXPECT_NEAR(matrix_operator().element(bvec_cpu, i, 0),
-                    matrix_operator().element(bvec_cuda, i, 0), epsilon);
-    }
-
-    for (size_type i = 0; i < e_bound_size; i++) {
-        for (size_type j = 0; j < e_bound_size; j++) {
-            EXPECT_NEAR(matrix_operator().element(bcov_cpu, i, j),
-                        matrix_operator().element(bcov_cuda, i, j), epsilon);
+        for (size_type i = 0; i < e_bound_size; i++) {
+            for (size_type j = 0; j < e_bound_size; j++) {
+                EXPECT_NEAR(matrix_operator().element(bcov_cpu, i, j),
+                            matrix_operator().element(bcov_gpu, i, j),
+                            epsilon);
+            }
         }
     }
 }
-    */
-#include "TimeLogger.hpp"
-std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
-std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
+*/
 
-TEST(rk_stepper_cuda, rk_stepper) {
+#include "TimeLogger.hpp"
+
+TEST(rk_stepper_vecpar, free_state_host_mr) {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
+
+    std::cout << "[rk_stepper_vecpar] free_state host-device memory"
+              << std::endl;
 
     // VecMem memory resource(s)
     vecmem::host_memory_resource host_mr;
-    vecmem::cuda::managed_memory_resource mng_mr;
 
     // Create the vector of initial track parameters
-    vecmem::vector<free_track_parameters> tracks_host(&mng_mr);
-    vecmem::vector<free_track_parameters> tracks_device(&mng_mr);
+    vecmem::vector<free_track_parameters> tracks_host(&host_mr);
+    vecmem::vector<free_track_parameters> tracks_device(&host_mr);
 
     // Create the vector of accumulated path lengths
     vecmem::vector<scalar> path_lengths(&host_mr);
@@ -286,6 +304,11 @@ TEST(rk_stepper_cuda, rk_stepper) {
         }
     }
 
+    start_time = std::chrono::high_resolution_clock::now();
+
+#if defined(_OPENMP) && !defined(__CUDA__)
+#pragma omp parallel for
+#endif
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
 
         auto &traj = tracks_host[i];
@@ -327,24 +350,44 @@ TEST(rk_stepper_cuda, rk_stepper) {
         }
     }
 
-    start_time = std::chrono::high_resolution_clock::now();
-    // Get tracks data
-    auto tracks_data = vecmem::get_data(tracks_device);
+    end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> benchmark_time = end_time - start_time;
 
-    // Run RK stepper cuda kernel
-    rk_stepper_test(tracks_data, B);
+#if defined(__CUDA__)
+    printf("Sequential time  = %f s\n", benchmark_time.count());
+    write_to_csv("rk_stepper_free_host_cpu_seq.csv", benchmark_time.count());
+#elif defined(_OPENMP)
+    printf("OMP time  = %f s\n", benchmark_time.count());
+    write_to_csv("rk_stepper_free_host_cpu_omp.csv", benchmark_time.count());
+#endif
+
+    start_time = std::chrono::high_resolution_clock::now();
+    // Run RK stepper vecpar
+    rk_stepper_free_algorithm rk_stepper_algo;
+    vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar_config(),
+                         tracks_device, B);
 
     end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> cuda_time = end_time - start_time;
+    std::chrono::duration<double> vecpar_time = end_time - start_time;
 
-    printf("cuda gpu time  = %f s\n", cuda_time.count());
-    write_to_csv("rk_stepper_free_mng_gpu_cuda.csv", cuda_time.count());
+#if defined(__CUDA__)
+    printf("vecpar gpu time  = %f s\n", vecpar_time.count());
+    write_to_csv("rk_stepper_free_host_gpu_vecpar.csv", vecpar_time.count());
+#elif defined(_OPENMP)
+    printf("vecpar cpu time  = %f s\n", vecpar_time.count());
+    write_to_csv("rk_stepper_free_host_cpu_vecpar.csv", vecpar_time.count());
+#endif
 }
 
-TEST(rk_stepper_cuda, bound_state) {
+TEST(rk_stepper_vecpar, bound_state_host_mr) {
 
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
+
+    std::cout << "[rk_stepper_vecpar] bound_state host-device memory"
+              << std::endl;
     // VecMem memory resource(s)
-    vecmem::cuda::managed_memory_resource mng_mr;
+    vecmem::host_memory_resource host_mr;
 
     // test surface
     const vector3 u{0, 1, 0};
@@ -357,6 +400,8 @@ TEST(rk_stepper_cuda, bound_state) {
     vector3 mom{0.02, 0., 0.};
     scalar time = 0.;
     scalar q = -1.;
+
+    vecmem::vector<bound_track_parameters> in_params(&host_mr);
 
     // bound vector
     typename bound_track_parameters::vector_type bound_vector;
@@ -380,59 +425,71 @@ TEST(rk_stepper_cuda, bound_state) {
 
     // bound track parameter
     const bound_track_parameters in_param(0, bound_vector, bound_cov);
+    in_params.push_back(in_param);
+
     const vector3 B{0, 0, 1. * unit_constants::T};
-
-    /**
-     * Get CPU bound parameter after one turn
-     */
-
     mag_field_t mag_field(B);
-    prop_state<crk_stepper_t::state, nav_state> propagation{
-        crk_stepper_t::state(in_param, trf), nav_state{}};
-    crk_stepper_t::state &crk_state = propagation._stepping;
-    nav_state &n_state = propagation._navigation;
 
-    // Decrease tolerance down to 1e-8
-    crk_state.set_tolerance(rk_tolerance);
+    /// Get CPU bound parameter after one turn
 
-    // RK stepper and its state
-    crk_stepper_t crk_stepper(mag_field);
+    vecmem::vector<bound_track_parameters> out_param_cpu(&host_mr);
+    for (unsigned int i = 0; i < in_params.size(); i++) {
 
-    // Path length per turn
-    scalar S = 2. * std::fabs(1. / in_param.qop()) / getter::norm(B) * M_PI;
+        auto &traj = in_params[i];
 
-    // Run stepper for half turn
-    unsigned int max_steps = 1e4;
+        prop_state<crk_stepper_t::state, nav_state> propagation{
+            crk_stepper_t::state(traj, trf), nav_state{}};
+        crk_stepper_t::state &crk_state = propagation._stepping;
+        nav_state &n_state = propagation._navigation;
 
-    for (unsigned int i = 0; i < max_steps; i++) {
+        // Decrease tolerance down to 1e-8
+        crk_state.set_tolerance(rk_tolerance);
 
-        crk_state.set_constraint(S - crk_state.path_length());
+        // RK stepper and its state
+        crk_stepper_t crk_stepper(mag_field);
 
-        n_state._step_size = S;
+        // Path length per turn
+        scalar S = 2. * std::fabs(1. / traj.qop()) / getter::norm(B) * M_PI;
 
-        crk_stepper.step(propagation);
+        // Run stepper for half turn
+        unsigned int max_steps = 1e4;
 
-        if (std::abs(S - crk_state.path_length()) < 1e-6) {
-            break;
+        for (unsigned int j = 0; j < max_steps; j++) {
+
+            crk_state.set_constraint(S - crk_state.path_length());
+
+            n_state._step_size = S;
+
+            crk_stepper.step(propagation);
+
+            if (std::abs(S - crk_state.path_length()) < 1e-6) {
+                break;
+            }
+
+            // Make sure that we didn't reach the end of for loop
+            ASSERT_TRUE(j < max_steps - 1);
         }
-
-        // Make sure that we didn't reach the end of for loop
-        ASSERT_TRUE(i < max_steps - 1);
+        // Bound state after one turn propagation
+        const auto out_param = crk_stepper.bound_state(propagation, trf);
+        out_param_cpu.push_back(out_param);
     }
 
-    // Bound state after one turn propagation
-    const auto out_param_cpu = crk_stepper.bound_state(propagation, trf);
+    /// Get vecpar bound parameter after one turn
 
-    /**
-     * Get CUDA bound parameter after one turn
-     */
     start_time = std::chrono::high_resolution_clock::now();
-    vecmem::vector<bound_track_parameters> out_param_cuda(1, &mng_mr);
+    // Run RK stepper
+    rk_stepper_bound_algorithm rk_stepper_algo;
+    vecmem::vector<bound_track_parameters> out_param_gpu = vecpar::parallel_map(
+        rk_stepper_algo, host_mr, vecpar::config{1, 1}, in_params, B, trf);
 
-    bound_state_test(vecmem::get_data(out_param_cuda), in_param, B, trf);
     end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> cuda_time = end_time - start_time;
+    std::chrono::duration<double> vecpar_time = end_time - start_time;
 
-    printf("cuda gpu time  = %f s\n", cuda_time.count());
-    write_to_csv("rk_stepper_bound_mng_gpu_cuda.csv", cuda_time.count());
+#if defined(__CUDA__)
+    printf("vecpar gpu time  = %f s\n", vecpar_time.count());
+    write_to_csv("rk_stepper_bound_host_gpu_vecpar.csv", vecpar_time.count());
+#elif defined(_OPENMP)
+    printf("vecpar cpu time  = %f s\n", vecpar_time.count());
+    write_to_csv("rk_stepper_bound_host_cpu_vecpar.csv", vecpar_time.count());
+#endif
 }

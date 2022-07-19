@@ -19,7 +19,7 @@ if( "${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC" )
 endif()
 
 # Set the CUDA architecture to build code for.
-set( CMAKE_CUDA_ARCHITECTURES "52" CACHE STRING
+set( CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING
    "CUDA architectures to build device code for" )
 
 if( "${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA" )
@@ -37,5 +37,5 @@ detray_add_flag( CMAKE_CUDA_FLAGS_DEBUG "-G" )
 
 # More rigorous tests for the Debug builds.
 if( "${CUDAToolkit_VERSION}" VERSION_GREATER_EQUAL "10.2" )
-   detray_add_flag( CMAKE_CUDA_FLAGS_DEBUG "-Werror all-warnings" )
+ #  detray_add_flag( CMAKE_CUDA_FLAGS_DEBUG "-Werror all-warnings" )
 endif()

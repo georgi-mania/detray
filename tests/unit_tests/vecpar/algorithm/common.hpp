@@ -1,11 +1,5 @@
-/** Detray library, part of the ACTS project (R&D line)
- *
- * (c) 2022 CERN for the benefit of the ACTS project
- *
- * Mozilla Public License Version 2.0
- */
-
-#pragma once
+#ifndef DETRAY_RK_TEST_COMMON_HPP
+#define DETRAY_RK_TEST_COMMON_HPP
 
 #if defined(array)
 #include "detray/plugins/algebra/array_definitions.hpp"
@@ -17,11 +11,15 @@
 #include "detray/plugins/algebra/vc_array_definitions.hpp"
 #endif
 
+#include <cassert>
+
 #include "detray/definitions/qualifiers.hpp"
 #include "detray/definitions/units.hpp"
 #include "detray/field/constant_magnetic_field.hpp"
 #include "detray/propagator/rk_stepper.hpp"
 #include "detray/propagator/track.hpp"
+#include "vecpar/core/algorithms/parallelizable_map.hpp"
+#include "vecpar/core/definitions/config.hpp"
 
 using namespace detray;
 
@@ -82,20 +80,20 @@ struct prop_state {
     navigation_t _navigation;
 };
 
-}  // anonymous namespace
+}  // namespace
 
 namespace detray {
 
-// test function for Runge-Kutta stepper
-void rk_stepper_test(
-    vecmem::data::vector_view<free_track_parameters>& tracks_data,
-    const vector3 B);
+static inline vecpar::config vecpar_config() {
 
-// Test function for Runge-Kutta stepper bound state
-// This test investigates only one track
-void bound_state_test(
-    vecmem::data::vector_view<bound_track_parameters> out_param,
-    const bound_track_parameters in_param, const vector3 B,
-    const transform3 trf);
-
+#if !defined(__CUDA__)
+    vecpar::config config{};  // let the OpenMP runtime choose
+#else
+    constexpr int thread_dim = 2 * 32;
+    constexpr int block_dim = theta_steps * phi_steps / thread_dim + 1;
+    vecpar::config config{block_dim, thread_dim};
+#endif
+    return config;
+}
 }  // namespace detray
+#endif  // DETRAY_RK_TEST_COMMON_HPP
