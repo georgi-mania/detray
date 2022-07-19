@@ -79,7 +79,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
                         PROPERTIES LINKER_LANGUAGE CXX)
 
                 target_compile_options(detray_test_${algebra}_vecpar_gpu PUBLIC
-                        $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_70>)
+                        $<$<COMPILE_LANGUAGE:CXX>:-x cuda --offload-arch=sm_70 -fno-fast-math>)
             endforeach ()
         endif ()
     endif ()
