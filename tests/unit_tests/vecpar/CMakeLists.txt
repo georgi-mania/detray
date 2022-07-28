@@ -32,7 +32,7 @@ if ((TARGET vecpar::all) AND (TARGET vecpar::omp))
         else ()
             # if CUDA libraries not available,
             # run tests with host memory only
-            detray_add_test(${algebra}_vecpar_vecpar_cpu
+            detray_add_test(${algebra}_vecpar_cpu
                     "rk_stepper_vecpar_host_mr.cpp"
                     "algorithm/rk_stepper_bound_vecpar.hpp"
                     "algorithm/rk_stepper_free_vecpar.hpp"
