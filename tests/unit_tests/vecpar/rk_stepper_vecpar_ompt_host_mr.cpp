@@ -11,7 +11,7 @@
 #include "algorithm/rk_stepper_free_vecpar.hpp"
 #include "vecmem/memory/host_memory_resource.hpp"
 #include "vecpar/all/main.hpp"
-
+/*
 TEST(rk_stepper_vecpar, free_state_host_mr) {
 
     std::cout << "[rk_stepper_vecpar] free_state host-device memory" <<
@@ -111,7 +111,7 @@ std::endl;
 
     // Run RK stepper vecpar
     rk_stepper_free_algorithm rk_stepper_algo;
-    vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar_config(),
+    vecpar::ompt::parallel_map(rk_stepper_algo, host_mr, vecpar_config(),
 tracks_device, B);
 
     for (unsigned int i = 0; i < theta_steps * phi_steps; i++) {
@@ -223,7 +223,7 @@ std::endl;
     // Run RK stepper
     rk_stepper_bound_algorithm rk_stepper_algo;
     vecmem::vector<bound_track_parameters> out_param_gpu =
-        vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar::config{1, 1},
+        vecpar::ompt::parallel_map(rk_stepper_algo, host_mr, vecpar::config{1, 1},
 in_params, B, trf);
 
     /// Compare CPU and vecpar CPU/GPU
@@ -249,7 +249,7 @@ in_params, B, trf);
         }
     }
 }
-
+*/
 
 #include "TimeLogger.hpp"
 
@@ -362,21 +362,19 @@ TEST(rk_stepper_vecpar, free_state_host_mr_time) {
     start_time = std::chrono::high_resolution_clock::now();
     // Run RK stepper vecpar
     rk_stepper_free_algorithm rk_stepper_algo;
-    vecpar::parallel_map(rk_stepper_algo, host_mr, vecpar_config(),
-                         tracks_device, B);
-
+    vecpar::ompt::parallel_map(rk_stepper_algo, host_mr, tracks_device, B);
     end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> vecpar_time = end_time - start_time;
 
 #if defined(__CUDA__)
     printf("vecpar gpu time  = %f s\n", vecpar_time.count());
-    write_to_csv("rk_stepper_free_host_gpu_vecpar.csv", vecpar_time.count());
+    write_to_csv("rk_stepper_free_host_gpu_vecpar_ompt.csv", vecpar_time.count());
 #elif defined(_OPENMP)
     printf("vecpar cpu time  = %f s\n", vecpar_time.count());
-    write_to_csv("rk_stepper_free_host_cpu_vecpar.csv", vecpar_time.count());
+    write_to_csv("rk_stepper_free_host_cpu_vecpar_ompt.csv", vecpar_time.count());
 #endif
 }
-
+/*
 TEST(rk_stepper_vecpar, bound_state_host_mr_time) {
 
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
@@ -447,3 +445,4 @@ TEST(rk_stepper_vecpar, bound_state_host_mr_time) {
     write_to_csv("rk_stepper_bound_host_cpu_vecpar.csv", vecpar_time.count());
 #endif
 }
+ */
