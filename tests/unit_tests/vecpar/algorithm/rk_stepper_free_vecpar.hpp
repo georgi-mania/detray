@@ -10,8 +10,8 @@ struct rk_stepper_free_algorithm
           vecpar::collection::One, vecmem::vector<free_track_parameters>,
           const vector3> {
 
-    TARGET free_track_parameters& map(free_track_parameters& track,
-                                      const vector3& B) override {
+    TARGET free_track_parameters& mapping_function(free_track_parameters& track,
+                                      const vector3& B) const {
 
         free_track_parameters c_traj(track);
 

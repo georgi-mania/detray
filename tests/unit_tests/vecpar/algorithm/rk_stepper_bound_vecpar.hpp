@@ -11,10 +11,10 @@ struct rk_stepper_bound_algorithm
           vecmem::vector<bound_track_parameters>, const vector3,
           const transform3> {
 
-    TARGET bound_track_parameters& map(bound_track_parameters& out_param,
+    TARGET bound_track_parameters& mapping_function(bound_track_parameters& out_param,
                                        const bound_track_parameters& in_param,
                                        const vector3& B,
-                                       const transform3& trf) override {
+                                       const transform3& trf) const {
 
         mag_field_t mag_field(B);
         prop_state<crk_stepper_t::state, nav_state> propagation{
