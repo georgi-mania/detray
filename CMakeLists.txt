@@ -14,6 +14,10 @@ set( CMAKE_CXX_EXTENSIONS FALSE CACHE BOOL "Disable (host) C++ extensions" )
 set( CMAKE_CUDA_STANDARD 17 CACHE STRING "The (CUDA) C++ standard to use" )
 set( CMAKE_CUDA_EXTENSIONS FALSE CACHE BOOL "Disable (CUDA) C++ extensions" )
 
+# this hack is needed so that clang 15 loads
+# the appropriate libomp.so when more of them are available
+link_directories("/usr/local/lib")
+
 # CMake include(s).
 include( CMakeDependentOption )
 include( GNUInstallDirs )
@@ -172,10 +176,10 @@ option( DETRAY_SETUP_VECPAR
         "Set up the vecpar target(s) explicitly" TRUE )
 option( DETRAY_USE_SYSTEM_VECPAR
         "Pick up an existing installation of vecpar from the build environment"
-        FALSE )
+        TRUE )
  if( DETRAY_SETUP_VECPAR)
    if( DETRAY_USE_SYSTEM_VECPAR )
-      find_package( vecpar REQUIRED 0.0.2)
+      find_package( vecpar REQUIRED 0.0.3)
    else()
       add_subdirectory( extern/vecpar )
    endif()
